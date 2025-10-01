@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Baisomap iPhone - Corrigé</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+<style>
+  html,body { margin:0; padding:0; height:100%; font-family:'Helvetica Neue', Arial, sans-serif; background:#111; overflow:hidden; color:#fff }
+  #map { width:100%; height:100vh; }
+
+  /* central marker */
+  #centerMarker {
+    position:absolute; top:50%; left:50%;
+    width:20px; height:20px;
+    margin-left:-10px; margin-top:-10px;
+    background:rgba(255,255,255,0.8);
+    border:2px solid #ff416c; border-radius:50%;
+    z-index:999; pointer-events:none;
+    animation:pulse 1.2s infinite;
+  }
+  @keyframes pulse { 0%{transform:scale(1);opacity:1}50%{transform:scale(1.5);opacity:0.5}100%{transform:scale(1);opacity:1} }
+
+  /* top bar */
+  #topBar { position:absolute; top:15px; right:15px; z-index:1001; }
+  #topBar button { background:rgba(0,0,0,0.6); border:none; color:white; font-size:24px; padding:10px 12px; border-radius:10px; cursor:pointer }
+  #topBar button:hover{ transform:scale(1.05) }
+
+  /* menu popup */
+  #menuPopup { position:absolute; top:60px; right:15px; background:#1c1c1c; border-radius:12px; box-shadow:0 6px 20px rgba(0,0,0,0.4); display:none; flex-direction:column; z-index:1200; overflow:hidden }
+  #menuPopup button { background:transparent; border:none; color:white; font-size:16px; padding:12px 20px; text-align:left; cursor:pointer }
+  #menuPopup button:hover{ background:#333 }
+
+  #menuOverlay { position:fixed; top:0; left:0; right:0; bottom:0; display:none; z-index:1100 }
+
+  /* bottom bar */
+  #bottomBar { position:absolute; bottom:0; left:0; right:0; height:80px; background:#1c1c1c; display:flex; align-items:center; justify-content:space-around; box-shadow:0 -4px 10px rgba(0,0,0,0.5); z-index:1000 }
+  #bottomBar button { background:transparent; border:none; color:white; font-size:26px; cursor:pointer }
+  #openFormBtn { position:absolute; bottom:40px; left:50%; transform:translateX(-50%); z-index:1001; width:60px; height:60px; border-radius:50%; background:linear-gradient(135deg,#ff416c,#ff4b2b); color:white; font-size:28px; border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 8px 15px rgba(0,0,0,0.3) }
+
+  /* form bottom */
+  #formContainer { position:absolute; bottom:-300px; left:10px; right:10px; background:#1c1c1c; color:white; padding:20px; border-radius:20px; box-shadow:0 -6px 20px rgba(0,0,0,0.4); transition:bottom .35s ease, opacity .35s; z-index:1100; opacity:0 }
+  #formContainer.show { bottom:100px; opacity:1 }
+  .labelNote { text-align:center; color:#ccc; margin-bottom:8px; }
+  .hearts { display:flex; gap:10px; justify-content:center; margin:10px 0; font-size:30px; }
+  .heart { cursor:pointer; transition:.15s }
+  .heart:hover { transform:scale(1.1) }
+  #formContainer select, #formContainer button { width:100%; padding:12px; margin-bottom:12px; border-radius:12px; border:none; box-sizing:border-box }
+  #formContainer select { background:#2c2c2c; color:white }
+  #formContainer button { background:linear-gradient(135deg,#4D96FF,#3577cc); color:white; font-weight:700 }
+
+  /* --- Panneau Profil unifié (structure du code 1) --- */
+  #profilePanel {
+    position: absolute;
+    top: 0; right: -400px;
+    width: 320px;
+    height: 100vh;
+    background: #1c1c1c;
+    color: white;
+    z-index: 1300;
+    padding: 25px 20px;
+    box-shadow: -4px 0 15px rgba(0,0,0,0.5);
+    display: flex;
+    flex-direction: column;
+    transition: right 0.3s ease;
+    overflow-y: auto;
+    border-radius: 20px 0 0 20px;
+  }
+  #profilePanel.show { right: 0; }
+
+  #closeProfileBtn {
+    position: absolute; top: 15px; right: 15px;
+    background: transparent; border: none;
+    color: white; font-size: 26px; cursor: pointer;
+  }
+
+  /* Vue Connexion */
+  #loginPanel {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  #loginPanel h4 { margin-bottom: 8px; font-size: 16px; }
+  #loginPanel input {
+    width: 100%; padding: 10px; margin-bottom: 10px;
+    border-radius: 10px; border: none; background: #2c2c2c; color: white;
+  }
+  #loginPanel button {
+    width: 100%; padding: 10px; border-radius: 12px;
+    border: none; 
+    background: linear-gradient(135deg, #ff416c, #ff4b2b);
+    color: white; font-weight: bold; cursor: pointer;
+  }
+  #loginPanel button:hover { transform: scale(1.05); }
+
+  /* Vue Profil Connecté */
+  #connectedProfile {
+    display: none;
+    flex-direction: column;
+  }
+
+  .avatar {
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #ff416c, #ff4b2b);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 40px;
+    margin: 0 auto 15px;
+    cursor: pointer;
+  }
+
+  h2 { text-align: center; margin-bottom: 5px; }
+  .bio { text-align: center; font-size: 16px; color: #ccc; margin-bottom: 15px; }
+
+  .stats {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 15px;
+  }
+  .stats div { text-align: center; }
+  .stats div span { display: block; font-weight: bold; font-size: 18px; margin-top: 5px; }
+
+  .profile-btn {
+    width: 100%;
+    padding: 12px;
+    border-radius: 12px;
+    border: none;
+    font-weight: bold;
+    cursor: pointer;
+    background: linear-gradient(135deg, #ff416c, #ff4b2b);
+    color:white;
+    transition: 0.2s;
+    margin-bottom: 15px;
+  }
+  .profile-btn:hover { transform: scale(1.05); }
+
+  .note { font-size:12px; color:#aaa; text-align:center; margin-bottom:10px; }
+
+  /* Formulaire modification profil */
+  #editProfilePanel {
+    display: none;
+    flex-direction: column;
+  }
+
+  #editProfileForm input, #editProfileForm textarea, #editProfileForm select {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 12px;
+    border-radius: 12px;
+    border: none;
+    background: #2c2c2c;
+    color: white;
+    font-size: 16px;
+    box-sizing: border-box;
+  }
+  #editProfileForm textarea { resize: vertical; }
+
+  /* Posts */
+  .posts h3 { margin-bottom: 10px; font-size: 16px; text-align:center; }
+  .postItem {
+    background: #2c2c2c;
+    padding: 10px;
+    border-radius: 12px;
+    margin-bottom: 10px;
+    font-size: 16px;
+  }
+
+  /* --- Panneau Paramètres (structure du code 1) --- */
+  #settingsPanel {
+    position: absolute;
+    top: 0; right: -400px;
+    width: 320px;
+    height: 100vh;
+    background: #1c1c1c;
+    padding: 20px;
+    box-shadow: -4px 0 15px rgba(0,0,0,0.5);
+    border-radius: 20px 0 0 20px;
+    transition: right 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    z-index: 2000;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  #settingsPanel.show { right: 0; }
+
+  #closeSettingsBtn {
+    position: absolute;
+    top: 15px; right: 15px;
+    border: none;
+    background: transparent;
+    color: white;
+    font-size: 26px;
+    cursor: pointer;
+  }
+
+  /* Sections */
+  #settingsPanel h2 {
+    text-align: center;
+    margin-bottom: 15px;
+  }
+
+  .setting {
+    margin-bottom: 20px;
+  }
+
+  .setting label {
+    display: block;
+    font-size: 16px;
+    margin-bottom: 6px;
+    color: #ddd;
+  }
+
+  .setting input, 
+  .setting select,
+  .setting button,
+  .setting textarea {
+    width: 100%;
+    padding: 10px;
+    border-radius: 12px;
+    border: none;
+    background: #2c2c2c;
+    color: white;
+    font-size: 16px;
+    touch-action: manipulation;
+  }
+
+  /* Bouton Sauvegarder */
+  #saveSettings {
+    margin-top: 20px;
+    padding: 12px;
+    border-radius: 12px;
+    border: none;
+    font-weight: bold;
+    background: linear-gradient(135deg, #4D96FF, #3577cc);
+    color: white;
+    cursor: pointer;
+    transition: transform 0.2s;
+  }
+  #saveSettings:hover { transform: scale(1.05); }
+
+  /* Notifications */
+  #notifContainer {
+    position: absolute;
+    top: 10px; left: 50%;
+    transform: translateX(-50%);
+    z-index: 3000;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    pointer-events: none;
+  }
+
+  .notif {
+    background: #4D96FF;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 12px;
+    font-size: 16px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: opacity 0.4s, transform 0.4s;
+  }
+  .notif.show {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .notif.points { background: #ff416c; }
+  .notif.amis { background: #4D96FF; }
+  .notif.messages { background: #ffb347; color: #111; }
+  .notif.systeme { background: #888; }
+
+  /* small responsive tweaks */
+  @media (max-width:420px){
+    #profilePanel, #settingsPanel { width: 90vw }
+    #formContainer { left:6px; right:6px }
+  }
+</style>
+</head>
+<body>
+
+  <div id="map"></div>
+  <div id="centerMarker"></div>
+
+  <!-- notification container -->
+  <div id="notifContainer"></div>
+
+  <!-- top bar -->
+  <div id="topBar">
+    <button id="menuBtn"><i class="fa-solid fa-ellipsis"></i></button>
+  </div>
+
+  <div id="menuOverlay"></div>
+  <div id="menuPopup">
+    <button id="profileBtn"><i class="fa-solid fa-user"></i> Profil</button>
+    <button id="settingsBtn"><i class="fa-solid fa-gear"></i> Paramètres</button>
+    <button id="reportBtn"><i class="fa-solid fa-flag"></i> Signalement</button>
+  </div>
+
+  <!-- bottom -->
+  <div id="bottomBar">
+    <button id="homeBtn"><i class="fa-solid fa-house"></i></button>
+    <button id="accountBtn"><i class="fa-solid fa-user"></i></button>
+  </div>
+
+  <button id="openFormBtn"><i class="fa-solid fa-plus"></i></button>
+
+  <!-- form container to add points -->
+  <div id="formContainer">
+    <button id="closeFormBtn">✖</button>
+
+    <div class="labelNote">Note de la galipette</div>
+    <div class="hearts" id="hearts">
+      <span class="heart" data-value="1">🩶</span>
+      <span class="heart" data-value="2">🩶</span>
+      <span class="heart" data-value="3">🩶</span>
+      <span class="heart" data-value="4">🩶</span>
+      <span class="heart" data-value="5">🩶</span>
+    </div>
+
+    <select id="mode">
+      <option value="public">Public</option>
+      <option value="privé">Privé</option>
+    </select>
+    <p id="instructions" style="text-align:center;color:#aaa">Le point sera placé au centre de la carte</p>
+    <button id="addPointBtn">Valider le point</button>
+  </div>
+
+  <!-- Panneau Profil unifié (structure du code 1) -->
+  <div id="profilePanel">
+    <button id="closeProfileBtn">✖</button>
+    
+    <!-- Vue Connexion (affichée par défaut) -->
+    <div id="loginPanel">
+      <div class="avatar"><i class="fa-solid fa-user"></i></div>
+      <h4>Connexion</h4>
+      <input type="email" id="emailInput" placeholder="Email">
+      <input type="password" id="passwordInput" placeholder="Mot de passe">
+      <label><input type="checkbox" id="stayConnected"> Rester connecté</label>
+      <button id="loginBtn">Se connecter</button>
+      <p class="switch-form" style="margin-top:10px;color:#bbb">Pas encore de compte ? <a href="#" id="showRegister" style="color:#4D96FF;text-decoration:none">Créer un compte</a></p>
+    </div>
+
+    <!-- Vue Profil Connecté (cachée par défaut) -->
+    <div id="connectedProfile">
+      <div class="avatar" id="profileAvatar"><i class="fa-solid fa-user"></i></div>
+      <h2 id="profileName">Lucia</h2>
+      <p class="bio" id="profileBio">Amatrice de balades et bons moments. 🌸</p>
+
+      <div class="stats">
+        <div>Points<span id="pointsCount">12</span></div>
+        <div>Note<span id="avgRating">4.2 ♥️</span></div>
+        <div>Amis<span id="friendsCount">8</span></div>
+      </div>
+
+      <button class="profile-btn" id="editProfileBtn">Modifier mon profil</button>
+
+      <div class="posts">
+        <h3>Derniers points ajoutés</h3>
+        <div class="postItem">💗 Balade au parc central - note ♥️♥️♥️♥️</div>
+        <div class="postItem">🌳 Coin secret trouvé - note ♥️♥️♥️♥️♥️</div>
+        <div class="postItem">🏞️ Vue magnifique sur la ville - note ♥️♥️♥️</div>
+      </div>
+    </div>
+
+    <!-- Panel Modification Profil (caché par défaut) -->
+    <div id="editProfilePanel">
+      <h2>Modifier mon profil</h2>
+      <div class="avatar" id="editAvatar"><i class="fa-solid fa-user"></i></div>
+      <p class="note">Clique sur l'avatar pour le changer</p>
+
+      <form id="editProfileForm">
+        <input type="text" id="profileNameInput" placeholder="Pseudo" value="Lucia">
+        <textarea id="profileBioInput" placeholder="Bio" rows="3">Amatrice de balades et bons moments. 🌸</textarea>
+        <select id="themeSelect">
+          <option value="dark" selected>Thème sombre</option>
+          <option value="light">Thème clair</option>
+        </select>
+
+        <button type="submit" class="profile-btn">Valider les modifications</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Panneau Paramètres (structure du code 1) -->
+  <div id="settingsPanel">
+    <button id="closeSettingsBtn">✖</button>
+    <h2>Paramètres</h2>
+
+    <!-- Notifications -->
+    <div class="setting">
+      <label for="notifToggle">Notifications générales</label>
+      <select id="notifToggle">
+        <option value="on">Activées</option>
+        <option value="off">Désactivées</option>
+      </select>
+    </div>
+
+    <div class="setting">
+      <label for="notifCategories">Notifications spécifiques</label>
+      <select id="notifCategories" multiple>
+        <option value="messages" selected>Messages</option>
+        <option value="amis" selected>Amis</option>
+        <option value="points" selected>Nouveaux points</option>
+        <option value="systeme" selected>Mises à jour</option>
+      </select>
+      <small style="font-size:11px;color:#888;">(Maintenir CTRL ou ⌘ pour sélectionner plusieurs)</small>
+    </div>
+
+    <!-- Localisation -->
+    <div class="setting">
+      <label for="geoToggle">Géolocalisation</label>
+      <select id="geoToggle">
+        <option value="on" selected>Activée</option>
+        <option value="off">Désactivée</option>
+      </select>
+    </div>
+
+    <!-- Langue -->
+    <div class="setting">
+      <label for="langSelect">Langue</label>
+      <select id="langSelect">
+        <option value="fr" selected>Français</option>
+        <option value="en">Anglais</option>
+        <option value="es">Espagnol</option>
+      </select>
+    </div>
+
+    <button id="saveSettings">Sauvegarder</button>
+  </div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script>
+/* -------------------------
+   Variables & Settings
+   ------------------------- */
+let isLoggedIn = false;
+let userPoints = 12;
+let rating = 0;
+
+const settings = {
+  notificationsOn: true,
+  categories: { messages:true, amis:true, points:true, systeme:true }
+};
+
+/* -------------------------
+   Utilitaires
+   ------------------------- */
+function showNotification(message, type="points", duration=3000){
+  if(!settings.notificationsOn || !settings.categories[type]) return;
+  
+  const container = document.getElementById('notifContainer');
+  const n = document.createElement('div');
+  n.className = `notif ${type}`;
+  n.textContent = message;
+  container.appendChild(n);
+  
+  setTimeout(()=>n.classList.add('show'), 50);
+  
+  setTimeout(()=>{
+    n.classList.remove('show');
+    setTimeout(()=> n.remove(), 400);
+  }, duration);
+}
+
+function updateNotifSettings(notifToggleValue, notifCatsArray){
+  settings.notificationsOn = notifToggleValue==='on';
+  settings.categories = { messages:false, amis:false, points:false, systeme:false };
+  notifCatsArray.forEach(cat => settings.categories[cat]=true);
+}
+
+/* -------------------------
+   Map init
+   ------------------------- */
+const map = L.map('map', { zoomControl:true, attributionControl:false }).setView([48.8566, 2.3522], 13);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{
+  maxZoom:19, subdomains:'abcd'
+}).addTo(map);
+
+function flouterPosition(latlng){
+  const offset = 0.00045;
+  return [ latlng.lat + (Math.random()-0.5)*offset, latlng.lng + (Math.random()-0.5)*offset ];
+}
+
+/* -------------------------
+   DOM elements
+   ------------------------- */
+const openFormBtn = document.getElementById('openFormBtn');
+const formContainer = document.getElementById('formContainer');
+const closeFormBtn = document.getElementById('closeFormBtn');
+const addPointBtn = document.getElementById('addPointBtn');
+const hearts = document.querySelectorAll('.heart');
+
+const menuBtn = document.getElementById('menuBtn');
+const menuPopup = document.getElementById('menuPopup');
+const menuOverlay = document.getElementById('menuOverlay');
+
+const profilePanel = document.getElementById('profilePanel');
+const profileBtn = document.getElementById('profileBtn');
+const accountBtn = document.getElementById('accountBtn');
+const closeProfileBtn = document.getElementById('closeProfileBtn');
+
+const loginBtn = document.getElementById('loginBtn');
+const showRegisterLink = document.getElementById('showRegister');
+
+/* -------------------------
+   UI Handlers
+   ------------------------- */
+// open/close bottom form
+openFormBtn.addEventListener('click', ()=> formContainer.classList.add('show'));
+closeFormBtn.addEventListener('click', ()=> formContainer.classList.remove('show'));
+
+// hearts rating
+hearts.forEach(h => h.addEventListener('click', ()=>{
+  rating = parseInt(h.dataset.value || 0);
+  hearts.forEach(x => x.textContent = (parseInt(x.dataset.value) <= rating) ? '♥️' : '🩶');
+}));
+
+// add point
+addPointBtn.addEventListener('click', ()=>{
+  const center = map.getCenter();
+  const mode = document.getElementById('mode').value;
+  const pos = (mode === 'public') ? flouterPosition(center) : center;
+
+  const iconHtml = `<div style="background:${mode==='public' ? '#ff416c' : '#4D96FF'}; width:20px; height:20px; border-radius:50%; border:2px solid white"></div>`;
+  const icon = L.divIcon({ html:iconHtml, className:'', iconSize:[20,20], iconAnchor:[10,10] });
+
+  const marker = L.marker(pos, { icon }).addTo(map);
+  let circle = null;
+  if(mode === 'public') circle = L.circle(pos, { radius:50, color:'#ff416c', fillColor:'#ff416c', fillOpacity:0.15 }).addTo(map);
+
+  const popupContent = document.createElement('div');
+  popupContent.innerHTML = `<div><b>Note :</b> ${"♥️".repeat(rating)}<br>Mode: ${mode}<br><br><button class="deleteBtn">🗑 Supprimer</button></div>`;
+
+  marker.bindPopup(popupContent);
+
+  marker.on('popupopen', (e) => {
+    const btn = popupContent.querySelector('.deleteBtn');
+    if(btn) btn.addEventListener('click', ()=>{
+      map.removeLayer(marker);
+      if(circle) map.removeLayer(circle);
+      showNotification("Point supprimé 🗑️", "points");
+    });
+  });
+
+  showNotification(mode === 'public' ? '✨ Nouveau point public ajouté !' : '🔒 Nouveau point privé ajouté !', 'points');
+  if(isLoggedIn) {
+    userPoints++;
+    document.getElementById('pointsCount').textContent = userPoints;
+  }
+
+  // reset rating and close form
+  rating = 0;
+  hearts.forEach(h => h.textContent = '🩶');
+  formContainer.classList.remove('show');
+});
+
+/* -------------------------
+   Menu / Profile actions
+   ------------------------- */
+menuBtn.addEventListener('click', ()=> {
+  menuPopup.style.display = 'flex';
+  menuOverlay.style.display = 'block';
+});
+menuOverlay.addEventListener('click', ()=> {
+  menuPopup.style.display = 'none';
+  menuOverlay.style.display = 'none';
+});
+
+// Profile panel functions
+function openProfilePanel(){
+  profilePanel.classList.add('show');
+  if(isLoggedIn){
+    document.getElementById('loginPanel').style.display='none';
+    document.getElementById('connectedProfile').style.display='flex';
+    document.getElementById('editProfilePanel').style.display='none';
+  } else {
+    document.getElementById('loginPanel').style.display='flex';
+    document.getElementById('connectedProfile').style.display='none';
+    document.getElementById('editProfilePanel').style.display='none';
+  }
+}
+
+profileBtn.addEventListener('click', ()=> {
+  openProfilePanel();
+  menuPopup.style.display = 'none';
+  menuOverlay.style.display = 'none';
+});
+accountBtn.addEventListener('click', openProfilePanel);
+closeProfileBtn.addEventListener('click', ()=> profilePanel.classList.remove('show'));
+
+// Avatar change
+function setupAvatarChange(avatarElement){
+  avatarElement.addEventListener('click', ()=>{
+    const icons=['fa-user','fa-star','fa-heart','fa-smile'];
+    let current=avatarElement.querySelector('i').classList[1];
+    let index=icons.indexOf(current);
+    avatarElement.querySelector('i').classList.replace(current,icons[(index+1)%icons.length]);
+  });
+}
+
+// Edit profile
+document.getElementById('editProfileBtn').addEventListener('click', ()=>{
+  document.getElementById('connectedProfile').style.display='none';
+  document.getElementById('editProfilePanel').style.display='flex';
+});
+
+document.getElementById('editProfileForm').addEventListener('submit', e=>{
+  e.preventDefault();
+  const newName=document.getElementById('profileNameInput').value;
+  const newBio=document.getElementById('profileBioInput').value;
+  const newTheme=document.getElementById('themeSelect').value;
+  document.getElementById('profileName').textContent=newName;
+  document.getElementById('profileBio').textContent=newBio;
+  showNotification("Profil mis à jour ! ✅","systeme");
+  document.getElementById('editProfilePanel').style.display='none';
+  document.getElementById('connectedProfile').style.display='flex';
+});
+
+/* -------------------------
+   Settings panel
+   ------------------------- */
+const settingsPanel = document.getElementById('settingsPanel');
+const closeSettingsBtn = document.getElementById('closeSettingsBtn');
+const saveSettingsBtn = document.getElementById('saveSettings');
+
+document.getElementById('settingsBtn').addEventListener('click', ()=>{
+  settingsPanel.classList.add('show');
+  menuPopup.style.display = 'none';
+  menuOverlay.style.display = 'none';
+});
+closeSettingsBtn.addEventListener('click', ()=> settingsPanel.classList.remove('show'));
+
+saveSettingsBtn.addEventListener('click', ()=>{
+  const notif = document.getElementById('notifToggle').value;
+  const notifCats = Array.from(document.getElementById('notifCategories').selectedOptions).map(o=>o.value);
+  const geo = document.getElementById('geoToggle').value;
+  const lang = document.getElementById('langSelect').value;
+  
+  updateNotifSettings(notif, notifCats);
+  showNotification("Paramètres sauvegardés ✅","systeme");
+  settingsPanel.classList.remove('show');
+});
+
+/* -------------------------
+   Login / Register logic
+   ------------------------- */
+let registeredUser = JSON.parse(localStorage.getItem("user")) || null;
+
+// Toggle register form
+showRegisterLink.addEventListener('click', (e)=>{
+  e.preventDefault();
+
+  // Création dynamique d'un petit formulaire
+  const registerForm = document.createElement("div");
+  registerForm.innerHTML = `
+    <h4>Créer un compte</h4>
+    <input type="email" id="regEmail" placeholder="Email" required>
+    <input type="password" id="regPassword" placeholder="Mot de passe" required>
+    <button id="registerBtn">S'inscrire</button>
+    <p style="margin-top:10px;color:#bbb">Déjà un compte ? 
+       <a href="#" id="backToLogin" style="color:#4D96FF;text-decoration:none">Se connecter</a>
+    </p>
+  `;
+  registerForm.style.display = "flex";
+  registerForm.style.flexDirection = "column";
+  registerForm.style.gap = "10px";
+
+  // Remplace le panneau login par ce formulaire
+  const loginPanel = document.getElementById("loginPanel");
+  loginPanel.innerHTML = "";
+  loginPanel.appendChild(registerForm);
+
+  // Gérer inscription
+  document.getElementById("registerBtn").addEventListener("click", ()=>{
+    const email = document.getElementById("regEmail").value;
+    const password = document.getElementById("regPassword").value;
+
+    if(!email || !password){
+      alert("Merci de remplir tous les champs");
+      return;
+    }
+
+    registeredUser = { email, password };
+    localStorage.setItem("user", JSON.stringify(registeredUser));
+    alert("✅ Compte créé ! Tu peux maintenant te connecter.");
+    
+    // Retour à la vue connexion
+    location.reload();
+  });
+
+  // Retour login
+  document.getElementById("backToLogin").addEventListener("click", ()=>{
+    location.reload();
+  });
+});
+
+// Login
+loginBtn.addEventListener('click', ()=>{
+  const email = document.getElementById('emailInput').value;
+  const password = document.getElementById('passwordInput').value;
+
+  if(!registeredUser){
+    alert("⚠️ Aucun compte n'existe encore. Créez-en un d'abord !");
+    return;
+  }
+
+  if(email === registeredUser.email && password === registeredUser.password){
+    isLoggedIn = true;
+    document.getElementById('loginPanel').style.display = 'none';
+    document.getElementById('connectedProfile').style.display = 'flex';
+    document.getElementById('pointsCount').textContent = userPoints;
+    showNotification("Connexion réussie ! 👋","systeme");
+
+    // Avatar change
+    setupAvatarChange(document.getElementById('profileAvatar'));
+    setupAvatarChange(document.getElementById('editAvatar'));
+  } else {
+    alert("❌ Email ou mot de passe incorrect");
+  }
+});
+
+const homeBtn = document.getElementById('homeBtn');
+
+homeBtn.addEventListener('click', () => {
+  if(navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const latlng = [pos.coords.latitude, pos.coords.longitude];
+        map.setView(latlng, 16); // recentre et zoom
+      },
+      (err) => {
+        alert("Impossible de récupérer votre position");
+        console.error(err);
+      }
+    );
+  } else {
+    alert("Géolocalisation non supportée par votre navigateur");
+  }
+});
+
+</script>
+
+</body>
+</html>
