@@ -649,21 +649,20 @@ saveSettingsBtn.addEventListener('click', ()=>{
   settingsPanel.classList.remove('show');
 });
 
-/* -------------------------
-   Login / Register logic
-   ------------------------- */
-let registeredUser = JSON.parse(localStorage.getItem("user")) || null;
-
-// Toggle register form
 showRegisterLink.addEventListener('click', (e)=>{
   e.preventDefault();
 
-  // Création dynamique d'un petit formulaire
+  // Création dynamique d'un formulaire complet
   const registerForm = document.createElement("div");
   registerForm.innerHTML = `
     <h4>Créer un compte</h4>
+    <div class="avatar" id="regAvatar"><i class="fa-solid fa-user"></i></div>
+    <p class="note">Clique sur l'avatar pour le changer</p>
+    <input type="text" id="regPseudo" placeholder="Pseudo" required>
     <input type="email" id="regEmail" placeholder="Email" required>
     <input type="password" id="regPassword" placeholder="Mot de passe" required>
+    <input type="password" id="regPasswordConfirm" placeholder="Confirmer le mot de passe" required>
+    <textarea id="regBio" placeholder="Bio" rows="3"></textarea>
     <button id="registerBtn">S'inscrire</button>
     <p style="margin-top:10px;color:#bbb">Déjà un compte ? 
        <a href="#" id="backToLogin" style="color:#4D96FF;text-decoration:none">Se connecter</a>
@@ -673,25 +672,36 @@ showRegisterLink.addEventListener('click', (e)=>{
   registerForm.style.flexDirection = "column";
   registerForm.style.gap = "10px";
 
-  // Remplace le panneau login par ce formulaire
   const loginPanel = document.getElementById("loginPanel");
   loginPanel.innerHTML = "";
   loginPanel.appendChild(registerForm);
 
-  // Gérer inscription
+  // Avatar cliquable
+  const regAvatar = document.getElementById("regAvatar");
+  setupAvatarChange(regAvatar);
+
+  // Gestion inscription
   document.getElementById("registerBtn").addEventListener("click", ()=>{
     const email = document.getElementById("regEmail").value;
     const password = document.getElementById("regPassword").value;
+    const passwordConfirm = document.getElementById("regPasswordConfirm").value;
+    const pseudo = document.getElementById("regPseudo").value;
+    const bio = document.getElementById("regBio").value;
+    const avatarClass = regAvatar.querySelector("i").className;
 
-    if(!email || !password){
+    if(!email || !password || !pseudo){
       alert("Merci de remplir tous les champs");
       return;
     }
+    if(password !== passwordConfirm){
+      alert("⚠️ Les mots de passe ne correspondent pas !");
+      return;
+    }
 
-    registeredUser = { email, password };
+    registeredUser = { email, password, pseudo, bio, avatarClass };
     localStorage.setItem("user", JSON.stringify(registeredUser));
     alert("✅ Compte créé ! Tu peux maintenant te connecter.");
-    
+
     // Retour à la vue connexion
     location.reload();
   });
