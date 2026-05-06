@@ -1,186 +1,223 @@
 <!DOCTYPE html>
-
 <html lang="fr">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Baisomap</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<title>Baisomap Fusion</title>
+<!-- Leaflet (Code 1) -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;background:#111;overflow:hidden;color:#fff;font-family:'Helvetica Neue',Arial,sans-serif;overscroll-behavior:none;user-select:none}
-#mapCanvas{position:absolute;top:0;left:0;width:100%;height:100%;touch-action:none;cursor:grab}
-#mapCanvas.grabbing{cursor:grabbing}
-#centerMarker{position:absolute;top:50%;left:50%;width:20px;height:20px;margin-left:-10px;margin-top:-10px;background:rgba(255,255,255,0.85);border:2.5px solid #ff416c;border-radius:50%;z-index:99;pointer-events:none;animation:pulse 1.2s infinite}
-@keyframes pulse{0%{transform:scale(1);opacity:1}50%{transform:scale(1.6);opacity:0.4}100%{transform:scale(1);opacity:1}}
-#attr{position:absolute;bottom:85px;right:8px;font-size:10px;color:rgba(255,255,255,0.35);z-index:90;pointer-events:none}
-#zoomBtns{position:absolute;bottom:140px;right:12px;display:flex;flex-direction:column;gap:4px;z-index:200}
-#zoomBtns button{width:36px;height:36px;border-radius:8px;background:rgba(0,0,0,0.65);border:1px solid rgba(255,255,255,0.15);color:white;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center}
-#zoomBtns button:active{background:rgba(255,255,255,0.15)}
-#topBar{position:absolute;top:15px;right:15px;z-index:300}
-#topBar button{background:rgba(0,0,0,0.65);border:1px solid rgba(255,255,255,0.1);color:white;font-size:22px;padding:10px 13px;border-radius:10px;cursor:pointer}
-#menuPopup{position:absolute;top:62px;right:15px;background:#1c1c1c;border-radius:12px;box-shadow:0 6px 20px rgba(0,0,0,0.5);display:none;flex-direction:column;z-index:400;overflow:hidden;border:1px solid rgba(255,255,255,0.08)}
-#menuPopup button{background:transparent;border:none;color:white;font-size:15px;padding:13px 20px;text-align:left;cursor:pointer;display:flex;align-items:center;gap:10px;white-space:nowrap}
-#menuPopup button:hover{background:#2a2a2a}
-#menuOverlay{position:fixed;inset:0;display:none;z-index:350}
-#bottomBar{position:absolute;bottom:0;left:0;right:0;height:80px;background:#1c1c1c;display:flex;align-items:center;justify-content:space-around;box-shadow:0 -4px 12px rgba(0,0,0,0.6);z-index:300;border-top:1px solid rgba(255,255,255,0.06)}
-#bottomBar button{background:transparent;border:none;color:white;font-size:26px;cursor:pointer;padding:10px;opacity:.8}
-#openFormBtn{position:absolute;bottom:40px;left:50%;transform:translateX(-50%);z-index:301;width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,#ff416c,#ff4b2b);color:white;font-size:26px;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 6px 18px rgba(255,65,108,0.45)}
-#formContainer{position:absolute;bottom:-320px;left:10px;right:10px;background:#1c1c1c;color:white;padding:20px;border-radius:20px;box-shadow:0 -6px 20px rgba(0,0,0,0.5);transition:bottom .35s cubic-bezier(.4,0,.2,1),opacity .35s;z-index:400;opacity:0;border:1px solid rgba(255,255,255,0.07)}
-#formContainer.show{bottom:100px;opacity:1}
-.labelNote{text-align:center;color:#ccc;margin-bottom:8px;font-size:15px}
-.hearts{display:flex;gap:10px;justify-content:center;margin:8px 0 14px;font-size:28px}
-.heart{cursor:pointer;transition:transform .15s}
-.heart:active{transform:scale(1.2)}
-#formContainer select,.validate-btn{width:100%;padding:12px;margin-bottom:10px;border-radius:12px;border:none;font-size:15px}
-#formContainer select{background:#2c2c2c;color:white}
-.validate-btn{background:linear-gradient(135deg,#4D96FF,#3577cc);color:white;font-weight:700;cursor:pointer}
-#closeFormBtn{background:transparent;border:none;color:#888;font-size:18px;cursor:pointer;float:right;line-height:1;margin-bottom:4px}
-#profilePanel,#settingsPanel{position:absolute;top:0;right:-400px;width:320px;height:100vh;background:#1c1c1c;color:white;z-index:500;padding:25px 20px 30px;box-shadow:-4px 0 20px rgba(0,0,0,0.6);display:flex;flex-direction:column;transition:right .3s cubic-bezier(.4,0,.2,1);overflow-y:auto;border-radius:20px 0 0 20px;border-left:1px solid rgba(255,255,255,0.06)}
-#profilePanel.show,#settingsPanel.show{right:0}
-#settingsPanel{z-index:600}
-#closeProfileBtn,#closeSettingsBtn{position:absolute;top:14px;right:14px;background:transparent;border:none;color:#888;font-size:24px;cursor:pointer;line-height:1}
-.panel-section{display:none;flex-direction:column;gap:10px}
-.panel-section.active{display:flex}
-.panel-section h4{text-align:center;font-size:18px;margin-bottom:4px}
-.panel-section input,.panel-section textarea{width:100%;padding:11px;border-radius:10px;border:none;background:#2a2a2a;color:white;font-size:15px}
-.panel-section textarea{resize:vertical}
-.stay-row{display:flex;align-items:center;gap:8px;font-size:13px;color:#aaa}
-.stay-row input{width:auto}
-.switch-link{text-align:center;font-size:13px;color:#888;margin-top:4px}
-.switch-link a{color:#4D96FF;text-decoration:none}
-.avatar{width:78px;height:78px;border-radius:50%;background:linear-gradient(135deg,#ff416c,#ff4b2b);display:flex;justify-content:center;align-items:center;font-size:38px;margin:0 auto 14px;flex-shrink:0}
-.avatar-picker{display:flex;flex-wrap:wrap;justify-content:center;gap:7px;margin-bottom:10px}
-.avatar-opt{width:38px;height:38px;border-radius:50%;background:#2a2a2a;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;border:2px solid transparent;transition:.15s}
-.avatar-opt:hover,.avatar-opt.selected{border-color:#ff416c}
-.profile-name{text-align:center;font-size:20px;font-weight:700;margin-bottom:4px}
-.profile-bio{text-align:center;font-size:14px;color:#aaa;margin-bottom:14px}
-.stats{display:flex;justify-content:space-around;margin-bottom:16px}
-.stats div{text-align:center;font-size:12px;color:#888}
-.stats div span{display:block;font-weight:700;font-size:18px;color:white;margin-top:3px}
-.profile-btn{width:100%;padding:12px;border-radius:12px;border:none;font-weight:700;cursor:pointer;color:white;transition:.2s;margin-bottom:9px;font-size:14px}
-.profile-btn:active{transform:scale(.98)}
-.profile-btn.primary{background:linear-gradient(135deg,#ff416c,#ff4b2b)}
-.profile-btn.secondary{background:#2a2a2a}
-.profile-btn.danger{background:linear-gradient(135deg,#c0392b,#8e1a11)}
-.profile-btn.blue{background:linear-gradient(135deg,#4D96FF,#3577cc)}
-.note{font-size:11px;color:#888;text-align:center;margin-bottom:8px}
-.divider{height:1px;background:rgba(255,255,255,0.07);margin:10px 0}
-.posts h3{font-size:14px;text-align:center;margin-bottom:8px}
-.postItem{background:#252525;padding:10px 12px;border-radius:10px;margin-bottom:8px;font-size:13px;line-height:1.5}
-.no-posts{text-align:center;color:#555;font-size:13px;padding:10px 0}
-.setting{margin-bottom:18px}
-.setting label{display:block;font-size:14px;margin-bottom:6px;color:#ccc}
-.setting select{width:100%;padding:10px;border-radius:10px;border:none;background:#2a2a2a;color:white;font-size:14px}
-.setting small{font-size:11px;color:#666;display:block;margin-top:4px}
-#notifContainer{position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:9999;display:flex;flex-direction:column;gap:7px;pointer-events:none;width:88%;max-width:340px}
-.notif{padding:11px 16px;border-radius:11px;font-size:14px;box-shadow:0 4px 14px rgba(0,0,0,0.45);opacity:0;transform:translateY(-8px);transition:opacity .35s,transform .35s;text-align:center;font-weight:500}
-.notif.show{opacity:1;transform:translateY(0)}
-.notif.points{background:#ff416c}
-.notif.systeme{background:#444}
-.notif.error{background:#c0392b}
-.notif.amis{background:#4D96FF}
-.map-popup{position:absolute;background:#1c1c1c;color:white;border-radius:12px;padding:12px 14px;font-size:13px;box-shadow:0 6px 20px rgba(0,0,0,0.6);z-index:250;border:1px solid rgba(255,255,255,0.1);min-width:150px;pointer-events:all}
-.map-popup .del-btn{margin-top:8px;padding:6px 10px;border-radius:8px;border:none;background:#ff416c;color:white;cursor:pointer;font-size:12px;width:100%}
-.ico{display:inline-block;vertical-align:middle;width:1em;height:1em;fill:currentColor}
-@media(max-width:420px){#profilePanel,#settingsPanel{width:94vw}}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; background: #111; overflow: hidden; font-family: 'Helvetica Neue', Arial, sans-serif; color: #fff; -webkit-tap-highlight-color: transparent; }
+#map { width: 100%; height: 100%; touch-action: pan-x pan-y; background: #111; }
+#centerMarker {
+  position: absolute; top: 50%; left: 50%;
+  width: 20px; height: 20px; margin-left: -10px; margin-top: -10px;
+  background: rgba(255,255,255,0.85);
+  border: 2.5px solid #ff416c; border-radius: 50%;
+  z-index: 999; pointer-events: none;
+  animation: pulse 1.2s infinite;
+}
+@keyframes pulse { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.6); opacity: 0.4; } 100% { transform: scale(1); opacity: 1; } }
+#topBar { position: absolute; top: 15px; right: 15px; z-index: 1000; }
+#topBar button {
+  background: rgba(0,0,0,0.65); border: 1px solid rgba(255,255,255,0.1);
+  color: white; font-size: 22px; padding: 10px 13px; border-radius: 10px;
+  cursor: pointer; backdrop-filter: blur(4px);
+}
+#menuPopup {
+  position: absolute; top: 62px; right: 15px; background: #1c1c1c;
+  border-radius: 12px; box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+  display: none; flex-direction: column; z-index: 1100;
+  border: 1px solid rgba(255,255,255,0.08); overflow: hidden;
+}
+#menuPopup button {
+  background: transparent; border: none; color: white; font-size: 15px;
+  padding: 13px 20px; text-align: left; cursor: pointer;
+  display: flex; align-items: center; gap: 10px;
+}
+#menuPopup button:hover { background: #2a2a2a; }
+#menuOverlay { position: fixed; inset: 0; display: none; z-index: 1050; background: rgba(0,0,0,0.3); }
+#bottomBar {
+  position: absolute; bottom: 0; left: 0; right: 0; height: 80px;
+  background: #1c1c1c; backdrop-filter: blur(10px);
+  display: flex; align-items: center; justify-content: space-around;
+  box-shadow: 0 -4px 12px rgba(0,0,0,0.6); z-index: 1000;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+#bottomBar button {
+  background: transparent; border: none; color: white; font-size: 26px;
+  cursor: pointer; padding: 10px; opacity: 0.8;
+}
+#openFormBtn {
+  position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
+  z-index: 1001; width: 60px; height: 60px; border-radius: 50%;
+  background: linear-gradient(135deg, #ff416c, #ff4b2b); color: white;
+  font-size: 26px; border: none; display: flex; align-items: center;
+  justify-content: center; cursor: pointer; box-shadow: 0 6px 18px rgba(255,65,108,0.45);
+}
+#formContainer {
+  position: absolute; bottom: -320px; left: 10px; right: 10px;
+  background: #1c1c1c; border-radius: 20px; padding: 20px;
+  box-shadow: 0 -6px 20px rgba(0,0,0,0.5); transition: bottom 0.35s cubic-bezier(0.4,0,0.2,1);
+  z-index: 1100; border: 1px solid rgba(255,255,255,0.07);
+}
+#formContainer.show { bottom: 100px; }
+#closeFormBtn { background: transparent; border: none; color: #888; font-size: 18px; float: right; cursor: pointer; }
+.labelNote { text-align: center; color: #ccc; margin-bottom: 8px; }
+.hearts { display: flex; gap: 10px; justify-content: center; margin: 8px 0 14px; font-size: 28px; }
+.heart { cursor: pointer; transition: transform 0.15s; }
+.heart:active { transform: scale(1.2); }
+#modeSelect { width: 100%; padding: 12px; border-radius: 12px; background: #2c2c2c; color: white; border: none; margin-bottom: 12px; }
+.validate-btn { width: 100%; padding: 12px; border-radius: 12px; background: linear-gradient(135deg,#4D96FF,#3577cc); color: white; font-weight: bold; border: none; cursor: pointer; }
+#profilePanel, #settingsPanel {
+  position: absolute; top: 0; right: -400px; width: 320px; height: 100vh;
+  background: #1c1c1c; z-index: 1200; padding: 25px 20px 30px;
+  box-shadow: -4px 0 20px rgba(0,0,0,0.6); display: flex; flex-direction: column;
+  transition: right 0.3s cubic-bezier(0.4,0,0.2,1); overflow-y: auto;
+  border-radius: 20px 0 0 20px; border-left: 1px solid rgba(255,255,255,0.06);
+}
+#profilePanel.show, #settingsPanel.show { right: 0; }
+#settingsPanel { z-index: 1250; }
+#closeProfileBtn, #closeSettingsBtn {
+  position: absolute; top: 14px; right: 14px;
+  background: transparent; border: none; color: #888; font-size: 24px; cursor: pointer;
+}
+.panel-section { display: none; flex-direction: column; gap: 10px; }
+.panel-section.active { display: flex; }
+.panel-section h4 { text-align: center; font-size: 18px; margin-bottom: 4px; }
+.panel-section input, .panel-section textarea, .panel-section select {
+  width: 100%; padding: 11px; border-radius: 10px; border: none;
+  background: #2a2a2a; color: white; font-size: 15px;
+}
+.stay-row { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #aaa; }
+.switch-link { text-align: center; font-size: 13px; color: #888; margin-top: 4px; }
+.switch-link a { color: #4D96FF; text-decoration: none; }
+.avatar {
+  width: 78px; height: 78px; border-radius: 50%;
+  background: linear-gradient(135deg, #ff416c, #ff4b2b);
+  display: flex; justify-content: center; align-items: center;
+  font-size: 38px; margin: 0 auto 14px; flex-shrink: 0;
+}
+.avatar-picker { display: flex; flex-wrap: wrap; justify-content: center; gap: 7px; margin-bottom: 10px; }
+.avatar-opt {
+  width: 38px; height: 38px; border-radius: 50%; background: #2a2a2a;
+  display: flex; align-items: center; justify-content: center; font-size: 20px;
+  cursor: pointer; border: 2px solid transparent; transition: 0.15s;
+}
+.avatar-opt:hover, .avatar-opt.selected { border-color: #ff416c; }
+.profile-name { text-align: center; font-size: 20px; font-weight: bold; margin-bottom: 4px; }
+.profile-bio { text-align: center; font-size: 14px; color: #aaa; margin-bottom: 14px; }
+.stats {
+  display: flex; justify-content: space-around; margin-bottom: 16px;
+  background: #252525; border-radius: 16px; padding: 10px;
+}
+.stats div { text-align: center; font-size: 12px; color: #888; }
+.stats div span { display: block; font-weight: bold; font-size: 18px; color: white; margin-top: 3px; }
+.profile-btn {
+  width: 100%; padding: 12px; border-radius: 12px; border: none;
+  font-weight: bold; cursor: pointer; color: white; transition: 0.2s; margin-bottom: 9px;
+}
+.profile-btn:active { transform: scale(0.98); }
+.profile-btn.primary { background: linear-gradient(135deg, #ff416c, #ff4b2b); }
+.profile-btn.secondary { background: #2a2a2a; }
+.profile-btn.danger { background: linear-gradient(135deg, #c0392b, #8e1a11); }
+.profile-btn.blue { background: linear-gradient(135deg, #4D96FF, #3577cc); }
+.note { font-size: 11px; color: #888; text-align: center; margin-bottom: 8px; }
+.divider { height: 1px; background: rgba(255,255,255,0.07); margin: 10px 0; }
+.posts h3 { font-size: 14px; text-align: center; margin-bottom: 8px; }
+.postItem {
+  background: #252525; padding: 10px 12px; border-radius: 10px;
+  margin-bottom: 8px; font-size: 13px; line-height: 1.5;
+}
+.no-posts { text-align: center; color: #555; font-size: 13px; padding: 10px 0; }
+.setting { margin-bottom: 18px; }
+.setting label { display: block; font-size: 14px; margin-bottom: 6px; color: #ccc; }
+.setting select { width: 100%; padding: 10px; border-radius: 10px; background: #2a2a2a; color: white; border: none; }
+.setting small { font-size: 11px; color: #666; display: block; margin-top: 4px; }
+#notifContainer {
+  position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
+  z-index: 9999; display: flex; flex-direction: column; gap: 7px;
+  pointer-events: none; width: 88%; max-width: 340px;
+}
+.notif {
+  padding: 11px 16px; border-radius: 11px; font-size: 14px;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.45); opacity: 0; transform: translateY(-8px);
+  transition: opacity 0.35s, transform 0.35s; text-align: center; font-weight: 500;
+}
+.notif.show { opacity: 1; transform: translateY(0); }
+.notif.points { background: #ff416c; }
+.notif.systeme { background: #444; }
+.notif.error { background: #c0392b; }
+.notif.amis { background: #4D96FF; }
+.map-popup {
+  background: #1c1c1c; color: white; border-radius: 12px; padding: 12px 14px;
+  font-size: 13px; box-shadow: 0 6px 20px rgba(0,0,0,0.6);
+  border: 1px solid rgba(255,255,255,0.1); min-width: 150px;
+}
+.map-popup .del-btn {
+  margin-top: 8px; padding: 6px 10px; border-radius: 8px;
+  border: none; background: #ff416c; color: white; cursor: pointer; width: 100%;
+}
+@media (max-width: 420px) {
+  #profilePanel, #settingsPanel { width: 94vw; }
+}
 </style>
 </head>
 <body>
-
-<canvas id="mapCanvas"></canvas>
-
+<div id="map"></div>
 <div id="centerMarker"></div>
-<div id="attr">© OpenStreetMap contributors</div>
 <div id="notifContainer"></div>
-
-<div id="zoomBtns">
-  <button id="zoomIn">+</button>
-  <button id="zoomOut">−</button>
-</div>
-
-<div id="topBar">
-  <button id="menuBtn">
-    <svg class="ico" viewBox="0 0 24 24"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
-  </button>
-</div>
-
+<div id="topBar"><button id="menuBtn">☰</button></div>
 <div id="menuOverlay"></div>
 <div id="menuPopup">
-  <button id="profileMenuBtn">
-    <svg class="ico" viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
-    Profil
-  </button>
-  <button id="settingsMenuBtn">
-    <svg class="ico" viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
-    Paramètres
-  </button>
-  <button id="reportMenuBtn">
-    <svg class="ico" viewBox="0 0 24 24"><path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z"/></svg>
-    Signalement
-  </button>
+  <button id="profileMenuBtn">👤 Profil</button>
+  <button id="settingsMenuBtn">⚙️ Paramètres</button>
+  <button id="reportMenuBtn">🚩 Signalement</button>
 </div>
-
 <div id="bottomBar">
-  <button id="homeBtn">
-    <svg class="ico" style="width:26px;height:26px" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
-  </button>
-  <button id="accountBtn">
-    <svg class="ico" style="width:26px;height:26px" viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
-  </button>
+  <button id="homeBtn">🏠</button>
+  <button id="accountBtn">👤</button>
 </div>
-
-<button id="openFormBtn">
-  <svg class="ico" style="width:28px;height:28px" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-</button>
-
+<button id="openFormBtn">+</button>
 <div id="formContainer">
   <button id="closeFormBtn">✕</button>
-  <div style="clear:both"></div>
   <div class="labelNote">Note de la galipette</div>
   <div class="hearts" id="hearts">
-    <span class="heart" data-v="1">🩶</span>
-    <span class="heart" data-v="2">🩶</span>
-    <span class="heart" data-v="3">🩶</span>
-    <span class="heart" data-v="4">🩶</span>
+    <span class="heart" data-v="1">🩶</span><span class="heart" data-v="2">🩶</span>
+    <span class="heart" data-v="3">🩶</span><span class="heart" data-v="4">🩶</span>
     <span class="heart" data-v="5">🩶</span>
   </div>
-  <select id="modeSelect">
-    <option value="public">🌍 Public</option>
-    <option value="prive">🔒 Privé</option>
-  </select>
+  <select id="modeSelect"><option value="public">🌍 Public</option><option value="prive">🔒 Privé</option></select>
   <p style="text-align:center;color:#666;font-size:13px;margin-bottom:12px">Le point sera placé au centre de la carte</p>
   <button class="validate-btn" id="addPointBtn">Valider le point</button>
 </div>
 
 <div id="profilePanel">
   <button id="closeProfileBtn">✕</button>
-
   <div id="loginSection" class="panel-section active">
-    <div class="avatar" style="background:linear-gradient(135deg,#333,#222)">
-      <svg style="width:40px;height:40px;fill:#aaa" viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
-    </div>
+    <div class="avatar" style="background:linear-gradient(135deg,#333,#222)"><span style="font-size:40px">👤</span></div>
     <h4>Connexion</h4>
     <input type="email" id="loginEmail" placeholder="Email" autocomplete="email">
-    <input type="password" id="loginPassword" placeholder="Mot de passe" autocomplete="current-password">
+    <input type="password" id="loginPassword" placeholder="Mot de passe">
     <label class="stay-row"><input type="checkbox" id="stayConnected"> Rester connecté</label>
     <button class="profile-btn primary" id="loginBtn">Se connecter</button>
     <p class="switch-link">Pas de compte ? <a href="#" id="toRegister">Créer un compte</a></p>
   </div>
-
   <div id="registerSection" class="panel-section">
     <h4>Créer un compte</h4>
     <div class="avatar" id="regAvatar">🙂</div>
     <p class="note">Choisis ton avatar</p>
     <div class="avatar-picker" id="regAvatarPicker"></div>
-    <input type="text" id="regPseudo" placeholder="Pseudo" autocomplete="username">
-    <input type="email" id="regEmail" placeholder="Email" autocomplete="email">
-    <input type="password" id="regPwd" placeholder="Mot de passe (6 min)" autocomplete="new-password">
-    <input type="password" id="regPwd2" placeholder="Confirmer le mot de passe" autocomplete="new-password">
+    <input type="text" id="regPseudo" placeholder="Pseudo">
+    <input type="email" id="regEmail" placeholder="Email">
+    <input type="password" id="regPwd" placeholder="Mot de passe (6 min)">
+    <input type="password" id="regPwd2" placeholder="Confirmer">
     <textarea id="regBio" placeholder="Bio (optionnel)" rows="2"></textarea>
     <button class="profile-btn primary" id="registerBtn">S'inscrire</button>
     <p class="switch-link">Déjà un compte ? <a href="#" id="toLogin">Se connecter</a></p>
   </div>
-
   <div id="connectedSection" class="panel-section">
     <div class="avatar" id="profileAvatar">🙂</div>
     <div class="profile-name" id="profileName">—</div>
@@ -193,16 +230,11 @@ html,body{height:100%;background:#111;overflow:hidden;color:#fff;font-family:'He
     <button class="profile-btn primary" id="editProfileBtn">Modifier mon profil</button>
     <button class="profile-btn danger" id="logoutBtn">Se déconnecter</button>
     <div class="divider"></div>
-    <div class="posts">
-      <h3>Mes derniers points</h3>
-      <div id="myPostsList"></div>
-    </div>
+    <div class="posts"><h3>Mes derniers points</h3><div id="myPostsList"></div></div>
   </div>
-
   <div id="editSection" class="panel-section">
     <h4>Modifier mon profil</h4>
     <div class="avatar" id="editAvatar">🙂</div>
-    <p class="note">Choisis un avatar</p>
     <div class="avatar-picker" id="editAvatarPicker"></div>
     <input type="text" id="editPseudo" placeholder="Pseudo">
     <textarea id="editBio" placeholder="Bio" rows="3"></textarea>
@@ -213,519 +245,331 @@ html,body{height:100%;background:#111;overflow:hidden;color:#fff;font-family:'He
 
 <div id="settingsPanel">
   <button id="closeSettingsBtn">✕</button>
-  <h2 style="text-align:center;margin-bottom:18px;font-size:18px">Paramètres</h2>
-  <div class="setting">
-    <label>Notifications générales</label>
-    <select id="notifToggle"><option value="on">Activées</option><option value="off">Désactivées</option></select>
-  </div>
-  <div class="setting">
-    <label>Notifications spécifiques</label>
-    <select id="notifCats" multiple>
-      <option value="points" selected>Nouveaux points</option>
-      <option value="amis" selected>Amis</option>
-      <option value="systeme" selected>Mises à jour</option>
-    </select>
-    <small>(Maintenir CTRL/⌘ pour plusieurs)</small>
-  </div>
-  <div class="setting">
-    <label>Géolocalisation</label>
-    <select id="geoToggle"><option value="on" selected>Activée</option><option value="off">Désactivée</option></select>
-  </div>
-  <div class="setting">
-    <label>Langue</label>
-    <select id="langSelect"><option value="fr" selected>Français</option><option value="en">Anglais</option></select>
-  </div>
-  <button class="profile-btn blue" id="saveSettings" style="margin-top:10px">Sauvegarder</button>
+  <h2 style="text-align:center;margin-bottom:18px">Paramètres</h2>
+  <div class="setting"><label>Notifications générales</label><select id="notifToggle"><option value="on">Activées</option><option value="off">Désactivées</option></select></div>
+  <div class="setting"><label>Notifications spécifiques</label><select id="notifCats" multiple><option value="points" selected>Nouveaux points</option><option value="amis" selected>Amis</option><option value="systeme" selected>Mises à jour</option></select><small>(CTRL/⌘ pour plusieurs)</small></div>
+  <div class="setting"><label>Géolocalisation</label><select id="geoToggle"><option value="on" selected>Activée</option><option value="off">Désactivée</option></select></div>
+  <div class="setting"><label>Langue</label><select id="langSelect"><option value="fr" selected>Français</option><option value="en">Anglais</option></select></div>
+  <button class="profile-btn blue" id="saveSettings">Sauvegarder</button>
 </div>
 
 <script>
-'use strict';
-
-const LS={
-  get:(k)=>{try{return JSON.parse(localStorage.getItem(k))}catch{return null}},
-  set:(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch{}},
-  del:(k)=>{try{localStorage.removeItem(k)}catch{}}
+// ---------- FUSION : STOCKAGE & PROFIL (Code 2) + CARTE LEAFLET (Code 1) ----------
+const LS = {
+  get: (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
+  set: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+  del: (k) => { try { localStorage.removeItem(k); } catch {} }
 };
 
-const AVATARS=['🙂','😎','🐱','🦊','🐸','🌙','🔥','💫','🐧','🦁','🌸','👻'];
+const AVATARS = ['🙂','😎','🐱','🦊','🐸','🌙','🔥','💫','🐧','🦁','🌸','👻'];
 
-let S={
-  loggedIn:false, user:null, rating:0,
-  settings:{notif:true,cats:{points:true,amis:true,systeme:true}},
-  mapPoints:[],
-  lat:48.8566, lng:2.3522, zoom:13,
-  dragging:false, lastX:0, lastY:0,
-  activePopup:null, didDrag:false
+let S = {
+  loggedIn: false, user: null, rating: 0,
+  settings: { notif: true, cats: { points: true, amis: true, systeme: true } },
+  mapPoints: []   // stockage de tous les points (id, lat, lng, mode, rating, ts)
 };
 
-// NOTIFS
-function notify(msg,type='systeme',dur=3000){
-  if(!S.settings.notif)return;
-  if(type!=='error'&&type!=='systeme'&&!S.settings.cats[type])return;
-  const c=document.getElementById('notifContainer');
-  const n=document.createElement('div');
-  n.className='notif '+type;
-  n.textContent=msg;
-  c.appendChild(n);
-  setTimeout(()=>n.classList.add('show'),30);
-  setTimeout(()=>{n.classList.remove('show');setTimeout(()=>n.remove(),400)},dur);
+// Notifications (Code 2)
+function notify(msg, type = 'systeme', dur = 3000) {
+  if (!S.settings.notif) return;
+  if (type !== 'error' && type !== 'systeme' && !S.settings.cats[type]) return;
+  const container = document.getElementById('notifContainer');
+  const n = document.createElement('div');
+  n.className = 'notif ' + type;
+  n.textContent = msg;
+  container.appendChild(n);
+  setTimeout(() => n.classList.add('show'), 30);
+  setTimeout(() => { n.classList.remove('show'); setTimeout(() => n.remove(), 400); }, dur);
 }
 
-// MAP
-const canvas=document.getElementById('mapCanvas');
-const ctx=canvas.getContext('2d');
-const tileCache={};
-
-function worldToScreen(lat,lng){
-  const z=S.zoom,ts=256,n=Math.pow(2,z);
-  const cx=canvas.width/2,cy=canvas.height/2;
-  const cxw=(S.lng+180)/360*n*ts;
-  const lr=S.lat*Math.PI/180;
-  const cyw=(1-Math.log(Math.tan(lr)+1/Math.cos(lr))/Math.PI)/2*n*ts;
-  const px=(lng+180)/360*n*ts;
-  const lr2=lat*Math.PI/180;
-  const py=(1-Math.log(Math.tan(lr2)+1/Math.cos(lr2))/Math.PI)/2*n*ts;
-  return{x:cx+(px-cxw),y:cy+(py-cyw)};
+// ---------- CARTE LEAFLET ----------
+let map;
+function initMap() {
+  map = L.map('map', { zoomControl: true, attributionControl: false }).setView([48.8566, 2.3522], 13);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    maxZoom: 19, subdomains: 'abcd', attribution: '© OpenStreetMap'
+  }).addTo(map);
 }
-
-function screenToWorld(sx,sy){
-  const z=S.zoom,ts=256,n=Math.pow(2,z);
-  const cx=canvas.width/2,cy=canvas.height/2;
-  const cxw=(S.lng+180)/360*n*ts;
-  const lr=S.lat*Math.PI/180;
-  const cyw=(1-Math.log(Math.tan(lr)+1/Math.cos(lr))/Math.PI)/2*n*ts;
-  const wx=cxw+(sx-cx);
-  const wy=cyw+(sy-cy);
-  const lngO=wx/(n*ts)*360-180;
-  const latO=Math.atan(Math.sinh(Math.PI*(1-2*wy/(n*ts))))*180/Math.PI;
-  return{lat:latO,lng:lngO};
+function flouterPosition(lat, lng, amount = 0.00045) {
+  return [lat + (Math.random() - 0.5) * amount, lng + (Math.random() - 0.5) * amount];
 }
-
-function getTile(z,x,y){
-  const key=z+'/'+x+'/'+y;
-  if(tileCache[key])return tileCache[key];
-  tileCache[key]='loading';
-  const img=new Image();
-  img.crossOrigin='anonymous';
-  const sub=['a','b','c'][Math.abs(x+y)%3];
-  img.src='https://'+sub+'.tile.openstreetmap.org/'+z+'/'+x+'/'+y+'.png';
-  img.onload=()=>{tileCache[key]=img;requestRedraw()};
-  img.onerror=()=>{tileCache[key]='error'};
-  return null;
-}
-
-let rdPending=false;
-function requestRedraw(){
-  if(!rdPending){rdPending=true;requestAnimationFrame(drawMap)}
-}
-
-function drawMap(){
-  rdPending=false;
-  const W=canvas.width,H=canvas.height;
-  ctx.clearRect(0,0,W,H);
-  ctx.fillStyle='#111';
-  ctx.fillRect(0,0,W,H);
-  const z=S.zoom,ts=256,n=Math.pow(2,z);
-  const cx=W/2,cy=H/2;
-  const cxw=(S.lng+180)/360*n*ts;
-  const lr=S.lat*Math.PI/180;
-  const cyw=(1-Math.log(Math.tan(lr)+1/Math.cos(lr))/Math.PI)/2*n*ts;
-  const tx0=Math.floor((cxw-cx)/ts);
-  const ty0=Math.floor((cyw-cy)/ts);
-  const cols=Math.ceil(W/ts)+2;
-  const rows=Math.ceil(H/ts)+2;
-  for(let tx=tx0;tx<tx0+cols;tx++){
-    for(let ty=ty0;ty<ty0+rows;ty++){
-      if(ty<0||ty>=n)continue;
-      const wx=tx*ts,wy=ty*ts;
-      const sx=cx+(wx-cxw),sy=cy+(wy-cyw);
-      const wx2=((tx%n)+n)%n;
-      const tile=getTile(z,wx2,ty);
-      if(tile&&tile!=='loading'&&tile!=='error'){
-        ctx.globalAlpha=1;
-        ctx.drawImage(tile,sx,sy,ts,ts);
-        ctx.globalAlpha=0.5;
-        ctx.fillStyle='#000';
-        ctx.fillRect(sx,sy,ts,ts);
-      } else {
-        ctx.globalAlpha=1;
-        ctx.fillStyle='#1a1a1a';
-        ctx.fillRect(sx,sy,ts,ts);
-        ctx.strokeStyle='#252525';
-        ctx.lineWidth=1;
-        ctx.strokeRect(sx,sy,ts,ts);
-      }
+// Recréer tous les marqueurs depuis S.mapPoints
+let currentMarkers = []; // pour les supprimer facilement
+function renderMarkers() {
+  if (!map) return;
+  // supprimer anciens marqueurs et cercles associés
+  currentMarkers.forEach(m => {
+    if (m.marker) map.removeLayer(m.marker);
+    if (m.circle) map.removeLayer(m.circle);
+  });
+  currentMarkers = [];
+  S.mapPoints.forEach(p => {
+    const color = p.mode === 'public' ? '#ff416c' : '#4D96FF';
+    const iconHtml = `<div style="background:${color}; width:18px; height:18px; border-radius:50%; border:2px solid white; box-shadow:0 0 4px black;"></div>`;
+    const icon = L.divIcon({ html: iconHtml, className: '', iconSize: [18,18], iconAnchor: [9,9] });
+    const marker = L.marker([p.lat, p.lng], { icon }).addTo(map);
+    let circle = null;
+    if (p.mode === 'public') {
+      circle = L.circle([p.lat, p.lng], { radius: 50, color: '#ff416c', fillColor: '#ff416c', fillOpacity: 0.15 }).addTo(map);
     }
-  }
-  ctx.globalAlpha=1;
-  S.mapPoints.forEach(drawPoint);
-}
-
-function drawPoint(p){
-  const sc=worldToScreen(p.lat,p.lng);
-  const x=sc.x,y=sc.y;
-  const color=p.mode==='public'?'#ff416c':'#4D96FF';
-  if(p.mode==='public'){
-    ctx.beginPath();ctx.arc(x,y,26,0,Math.PI*2);
-    ctx.fillStyle=color+'30';ctx.fill();
-  }
-  ctx.beginPath();ctx.arc(x,y,9,0,Math.PI*2);
-  ctx.fillStyle=color;ctx.fill();
-  ctx.beginPath();ctx.arc(x,y,9,0,Math.PI*2);
-  ctx.strokeStyle='rgba(255,255,255,0.9)';ctx.lineWidth=2;ctx.stroke();
-  if(p.rating>0){
-    ctx.font='10px Arial';ctx.fillStyle='white';ctx.textAlign='center';
-    ctx.fillText('♥'.repeat(p.rating),x,y-14);
-  }
-}
-
-function resizeCanvas(){
-  canvas.width=window.innerWidth;canvas.height=window.innerHeight;requestRedraw();
-}
-window.addEventListener('resize',resizeCanvas);
-resizeCanvas();
-
-// Drag
-canvas.addEventListener('mousedown',e=>{
-  closePopup();S.dragging=true;S.didDrag=false;
-  S.lastX=e.clientX;S.lastY=e.clientY;
-  canvas.classList.add('grabbing');
-});
-canvas.addEventListener('mousemove',e=>{
-  if(!S.dragging)return;
-  const dx=e.clientX-S.lastX,dy=e.clientY-S.lastY;
-  if(Math.abs(dx)+Math.abs(dy)>3)S.didDrag=true;
-  S.lastX=e.clientX;S.lastY=e.clientY;
-  panBy(dx,dy);
-});
-canvas.addEventListener('mouseup',e=>{
-  if(!S.didDrag)handleClick(e.clientX,e.clientY);
-  S.dragging=false;canvas.classList.remove('grabbing');
-});
-canvas.addEventListener('mouseleave',()=>{S.dragging=false;canvas.classList.remove('grabbing')});
-canvas.addEventListener('wheel',e=>{
-  e.preventDefault();changeZoom(e.deltaY>0?-1:1,e.clientX,e.clientY);
-},{passive:false});
-
-let touchStartX=0,touchStartY=0,touchMoved=false,pinchDist0=0,pinchZoom0=0;
-canvas.addEventListener('touchstart',e=>{
-  if(e.touches.length===2){
-    const t=e.touches;
-    const dx=t[0].clientX-t[1].clientX,dy=t[0].clientY-t[1].clientY;
-    pinchDist0=Math.sqrt(dx*dx+dy*dy);pinchZoom0=S.zoom;
-  } else {
-    closePopup();S.dragging=true;S.didDrag=false;touchMoved=false;
-    touchStartX=S.lastX=e.touches[0].clientX;
-    touchStartY=S.lastY=e.touches[0].clientY;
-  }
-},{passive:true});
-canvas.addEventListener('touchmove',e=>{
-  if(e.touches.length===2){
-    const t=e.touches;
-    const dx=t[0].clientX-t[1].clientX,dy=t[0].clientY-t[1].clientY;
-    const d=Math.sqrt(dx*dx+dy*dy);
-    const nz=Math.round(pinchZoom0+Math.log2(d/pinchDist0));
-    if(nz!==S.zoom)changeZoom(nz-S.zoom,canvas.width/2,canvas.height/2);
-  } else if(S.dragging){
-    const mx=e.touches[0].clientX,my=e.touches[0].clientY;
-    const dx=mx-S.lastX,dy=my-S.lastY;
-    if(Math.abs(mx-touchStartX)+Math.abs(my-touchStartY)>5)touchMoved=true;
-    S.lastX=mx;S.lastY=my;
-    panBy(dx,dy);
-  }
-},{passive:true});
-canvas.addEventListener('touchend',e=>{
-  if(e.touches.length===0){
-    if(!touchMoved)handleClick(touchStartX,touchStartY);
-    S.dragging=false;
-  }
-});
-
-function handleClick(cx,cy){
-  const rect=canvas.getBoundingClientRect();
-  const mx=cx-rect.left,my=cy-rect.top;
-  for(let i=S.mapPoints.length-1;i>=0;i--){
-    const p=S.mapPoints[i];
-    const sc=worldToScreen(p.lat,p.lng);
-    const dx=sc.x-mx,dy=sc.y-my;
-    if(Math.sqrt(dx*dx+dy*dy)<14){openPopup(p,sc.x,sc.y);return}
-  }
-}
-
-function panBy(dx,dy){
-  const z=S.zoom,ts=256,n=Math.pow(2,z);
-  const scale=1/(n*ts);
-  S.lng-=dx*(360*scale);
-  const lr=S.lat*Math.PI/180;
-  const my=Math.log(Math.tan(Math.PI/4+lr/2));
-  const nmy=my+dy*(2*Math.PI*scale);
-  S.lat=2*Math.atan(Math.exp(nmy))*180/Math.PI-90;
-  S.lat=Math.max(-85,Math.min(85,S.lat));
-  requestRedraw();
-}
-
-function changeZoom(delta,sx,sy){
-  const nz=Math.max(2,Math.min(19,S.zoom+delta));
-  if(nz===S.zoom)return;
-  const w0=screenToWorld(sx,sy);
-  S.zoom=nz;
-  const w1=screenToWorld(sx,sy);
-  S.lat+=w0.lat-w1.lat;S.lng+=w0.lng-w1.lng;
-  requestRedraw();
-}
-
-document.getElementById('zoomIn').addEventListener('click',()=>changeZoom(1,canvas.width/2,canvas.height/2));
-document.getElementById('zoomOut').addEventListener('click',()=>changeZoom(-1,canvas.width/2,canvas.height/2));
-
-// POPUP
-function openPopup(p,sx,sy){
-  closePopup();
-  const div=document.createElement('div');
-  div.className='map-popup';
-  const rStr=p.rating>0?'♥️'.repeat(p.rating):'🩶';
-  const d=new Date(p.ts||Date.now()).toLocaleDateString('fr-FR');
-  div.innerHTML='<b>Note :</b> '+rStr+'<br>Mode : '+p.mode+'<br><small style="color:#888">'+d+'</small><br><button class="del-btn">🗑 Supprimer</button>';
-  div.style.cssText='position:absolute;left:-999px;top:-999px';
-  document.body.appendChild(div);
-  requestAnimationFrame(()=>{
-    div.style.left=Math.max(8,Math.min(window.innerWidth-div.offsetWidth-8,sx-div.offsetWidth/2))+'px';
-    div.style.top=Math.max(60,sy-div.offsetHeight-14)+'px';
-  });
-  div.querySelector('.del-btn').addEventListener('click',()=>{
-    S.mapPoints=S.mapPoints.filter(x=>x.id!==p.id);
-    savePoints();
-    if(S.loggedIn)updateUserStats(-1,p.rating||0,p.mode);
-    closePopup();requestRedraw();
-    notify('Point supprimé 🗑️','systeme');
-  });
-  S.activePopup=div;
-}
-function closePopup(){if(S.activePopup){S.activePopup.remove();S.activePopup=null}}
-
-// GEOLOC
-document.getElementById('homeBtn').addEventListener('click',()=>{
-  if(!navigator.geolocation){notify('Géolocalisation non supportée','error');return}
-  navigator.geolocation.getCurrentPosition(
-    p=>{S.lat=p.coords.latitude;S.lng=p.coords.longitude;S.zoom=15;requestRedraw()},
-    ()=>notify('Position indisponible','error')
-  );
-});
-if(navigator.geolocation){
-  navigator.geolocation.getCurrentPosition(p=>{
-    S.lat=p.coords.latitude;S.lng=p.coords.longitude;requestRedraw();
-  },()=>{});
-}
-
-// MENU
-const menuBtn=document.getElementById('menuBtn');
-const menuPopup=document.getElementById('menuPopup');
-const menuOverlay=document.getElementById('menuOverlay');
-menuBtn.addEventListener('click',()=>{menuPopup.style.display='flex';menuOverlay.style.display='block'});
-menuOverlay.addEventListener('click',closeMenu);
-function closeMenu(){menuPopup.style.display='none';menuOverlay.style.display='none'}
-document.getElementById('profileMenuBtn').addEventListener('click',()=>{openProfile();closeMenu()});
-document.getElementById('settingsMenuBtn').addEventListener('click',()=>{
-  document.getElementById('settingsPanel').classList.add('show');syncSettingsUI();closeMenu();
-});
-document.getElementById('reportMenuBtn').addEventListener('click',()=>{closeMenu();notify('Signalement envoyé, merci 🙏','systeme')});
-
-// FORM
-const formEl=document.getElementById('formContainer');
-document.getElementById('openFormBtn').addEventListener('click',()=>formEl.classList.add('show'));
-document.getElementById('closeFormBtn').addEventListener('click',()=>formEl.classList.remove('show'));
-document.querySelectorAll('.heart').forEach(h=>h.addEventListener('click',()=>{
-  S.rating=parseInt(h.dataset.v);
-  document.querySelectorAll('.heart').forEach(x=>x.textContent=parseInt(x.dataset.v)<=S.rating?'♥️':'🩶');
-}));
-document.getElementById('addPointBtn').addEventListener('click',()=>{
-  const mode=document.getElementById('modeSelect').value;
-  let lat=S.lat,lng=S.lng;
-  if(mode==='public'){const off=0.00045;lat+=(Math.random()-.5)*off;lng+=(Math.random()-.5)*off}
-  const p={id:Date.now().toString(),lat,lng,mode,rating:S.rating,ts:Date.now()};
-  S.mapPoints.push(p);savePoints();
-  if(S.loggedIn)updateUserStats(1,S.rating,mode);
-  notify(mode==='public'?'✨ Point public ajouté !':'🔒 Point privé ajouté !','points');
-  S.rating=0;
-  document.querySelectorAll('.heart').forEach(h=>h.textContent='🩶');
-  formEl.classList.remove('show');requestRedraw();
-});
-function savePoints(){
-  LS.set('bmap_points',S.mapPoints.map(p=>({id:p.id,lat:p.lat,lng:p.lng,mode:p.mode,rating:p.rating,ts:p.ts})));
-}
-
-// PROFILE PANEL
-function showSection(id){
-  ['loginSection','registerSection','connectedSection','editSection'].forEach(s=>{
-    const el=document.getElementById(s);el.classList.remove('active');el.style.display='none';
-  });
-  const el=document.getElementById(id);el.style.display='flex';el.classList.add('active');
-}
-function openProfile(){
-  document.getElementById('profilePanel').classList.add('show');
-  showSection(S.loggedIn?'connectedSection':'loginSection');
-}
-document.getElementById('closeProfileBtn').addEventListener('click',()=>document.getElementById('profilePanel').classList.remove('show'));
-document.getElementById('accountBtn').addEventListener('click',openProfile);
-document.getElementById('toRegister').addEventListener('click',e=>{e.preventDefault();buildAvatarPicker('regAvatarPicker','regAvatar',false);showSection('registerSection')});
-document.getElementById('toLogin').addEventListener('click',e=>{e.preventDefault();showSection('loginSection')});
-
-// AVATAR PICKERS
-let pickerSel={reg:'🙂',edit:'🙂'};
-function buildAvatarPicker(pid,did,isEdit){
-  const picker=document.getElementById(pid);
-  const cur=isEdit?(S.user&&S.user.avatar||'🙂'):'🙂';
-  picker.innerHTML=AVATARS.map(e=>'<div class="avatar-opt'+(e===cur?' selected':'')+'" data-e="'+e+'">'+e+'</div>').join('');
-  picker.querySelectorAll('.avatar-opt').forEach(opt=>{
-    opt.addEventListener('click',()=>{
-      picker.querySelectorAll('.avatar-opt').forEach(o=>o.classList.remove('selected'));
-      opt.classList.add('selected');
-      document.getElementById(did).textContent=opt.dataset.e;
-      if(isEdit)pickerSel.edit=opt.dataset.e;else pickerSel.reg=opt.dataset.e;
+    // Popup avec suppression
+    const popupContent = document.createElement('div');
+    popupContent.className = 'map-popup';
+    const heartsStr = p.rating > 0 ? '♥️'.repeat(p.rating) : '🩶';
+    const date = new Date(p.ts || Date.now()).toLocaleDateString('fr-FR');
+    popupContent.innerHTML = `<b>Note :</b> ${heartsStr}<br>Mode : ${p.mode === 'public' ? 'Public' : 'Privé'}<br><small>${date}</small><br><button class="del-btn">🗑 Supprimer</button>`;
+    marker.bindPopup(popupContent);
+    marker.on('popupopen', () => {
+      const btn = popupContent.querySelector('.del-btn');
+      if (btn) btn.onclick = () => deletePoint(p.id);
     });
+    currentMarkers.push({ marker, circle, id: p.id });
   });
-  if(isEdit)pickerSel.edit=cur;else pickerSel.reg='🙂';
 }
-
-// REGISTER
-document.getElementById('registerBtn').addEventListener('click',()=>{
-  const pseudo=document.getElementById('regPseudo').value.trim();
-  const email=document.getElementById('regEmail').value.trim().toLowerCase();
-  const pwd=document.getElementById('regPwd').value;
-  const pwd2=document.getElementById('regPwd2').value;
-  const bio=document.getElementById('regBio').value.trim();
-  const avatar=pickerSel.reg||'🙂';
-  if(!pseudo||!email||!pwd){notify('Remplis tous les champs obligatoires','error');return}
-  if(!/\S+@\S+\.\S+/.test(email)){notify('Email invalide','error');return}
-  if(pwd.length<6){notify('Mot de passe trop court (6 min)','error');return}
-  if(pwd!==pwd2){notify('Les mots de passe ne correspondent pas','error');return}
-  const users=LS.get('bmap_users')||{};
-  if(users[email]){notify('Cet email est déjà utilisé','error');return}
-  const u={email,pseudo,bio,avatar,hash:btoa(email+':'+pwd+':bmap'),
-    pts:0,totalRating:0,posts:[],
-    since:new Date().toLocaleDateString('fr-FR',{month:'short',year:'numeric'})};
-  users[email]=u;LS.set('bmap_users',users);
-  notify('✅ Compte créé !','systeme');connectUser(u,false);
-});
-
-// LOGIN
-document.getElementById('loginBtn').addEventListener('click',()=>{
-  const email=document.getElementById('loginEmail').value.trim().toLowerCase();
-  const pwd=document.getElementById('loginPassword').value;
-  const stay=document.getElementById('stayConnected').checked;
-  if(!email||!pwd){notify('Remplis tous les champs','error');return}
-  const users=LS.get('bmap_users')||{};
-  const u=users[email];
-  if(!u){notify('Aucun compte avec cet email','error');return}
-  if(btoa(email+':'+pwd+':bmap')!==u.hash){notify('Mot de passe incorrect','error');return}
-  connectUser(u,stay);
-});
-
-function connectUser(u,stay){
-  S.loggedIn=true;S.user=u;
-  if(stay)LS.set('bmap_session',{email:u.email});
-  renderProfile();notify('Bienvenue '+u.pseudo+' 👋','systeme');
-  showSection('connectedSection');
+function deletePoint(id) {
+  const point = S.mapPoints.find(p => p.id === id);
+  if (!point) return;
+  // Supprimer du stockage
+  S.mapPoints = S.mapPoints.filter(p => p.id !== id);
+  savePoints();
+  // Mettre à jour stats utilisateur si connecté
+  if (S.loggedIn) updateUserStats(-1, point.rating || 0, point.mode);
+  renderMarkers();
+  notify('Point supprimé 🗑️', 'systeme');
 }
-
-// LOGOUT
-document.getElementById('logoutBtn').addEventListener('click',()=>{
-  S.loggedIn=false;S.user=null;LS.del('bmap_session');
-  document.getElementById('loginEmail').value='';
-  document.getElementById('loginPassword').value='';
-  document.getElementById('stayConnected').checked=false;
-  notify('À bientôt 👋','systeme');showSection('loginSection');
-});
-
-// RENDER PROFILE
-function renderProfile(){
-  const u=S.user;if(!u)return;
-  document.getElementById('profileAvatar').textContent=u.avatar||'🙂';
-  document.getElementById('profileName').textContent=u.pseudo;
-  document.getElementById('profileBio').textContent=u.bio||'';
-  document.getElementById('statSince').textContent=u.since||'—';
-  updateStats();renderPosts();
+function savePoints() {
+  LS.set('bmap_points', S.mapPoints.map(p => ({ id: p.id, lat: p.lat, lng: p.lng, mode: p.mode, rating: p.rating, ts: p.ts })));
 }
-function updateStats(){
-  const u=S.user;if(!u)return;
-  document.getElementById('statPoints').textContent=u.pts||0;
-  document.getElementById('statRating').textContent=u.pts>0?((u.totalRating/u.pts).toFixed(1)+' ♥️'):'—';
-}
-function updateUserStats(delta,rating,mode){
-  if(!S.loggedIn||!S.user)return;
-  const users=LS.get('bmap_users')||{};
-  const u=users[S.user.email];if(!u)return;
-  u.pts=Math.max(0,(u.pts||0)+delta);
-  u.totalRating=Math.max(0,(u.totalRating||0)+(delta>0?rating:-rating));
-  if(delta>0){
-    u.posts=u.posts||[];
-    u.posts.unshift({mode:mode||'public',rating,ts:Date.now()});
-    if(u.posts.length>10)u.posts=u.posts.slice(0,10);
+function addPointToStorage(lat, lng, mode, rating) {
+  let finalLat = lat, finalLng = lng;
+  if (mode === 'public') {
+    const [fltLat, fltLng] = flouterPosition(lat, lng);
+    finalLat = fltLat; finalLng = fltLng;
   }
-  users[S.user.email]=u;LS.set('bmap_users',users);S.user=u;
-  updateStats();renderPosts();
+  const newPoint = {
+    id: Date.now().toString(),
+    lat: finalLat,
+    lng: finalLng,
+    mode: mode,
+    rating: rating,
+    ts: Date.now()
+  };
+  S.mapPoints.push(newPoint);
+  savePoints();
+  if (S.loggedIn) updateUserStats(1, rating, mode);
+  renderMarkers();
+  notify(mode === 'public' ? '✨ Nouveau point public ajouté !' : '🔒 Nouveau point privé ajouté !', 'points');
 }
-function renderPosts(){
-  const u=S.user;
-  const el=document.getElementById('myPostsList');
-  if(!u||!u.posts||!u.posts.length){el.innerHTML='<p class="no-posts">Aucun point ajouté.</p>';return}
-  el.innerHTML=u.posts.slice(0,5).map(p=>
-    '<div class="postItem">'+(p.mode==='public'?'🌍':'🔒')+' '+(p.mode==='public'?'Public':'Privé')+' — '+('♥️'.repeat(p.rating||0)||'🩶')+'<br><small style="color:#666">'+new Date(p.ts||Date.now()).toLocaleDateString('fr-FR')+'</small></div>'
+
+// ---------- GESTION UTILISATEUR (Code 2) ----------
+function updateUserStats(delta, rating, mode) {
+  if (!S.loggedIn || !S.user) return;
+  const users = LS.get('bmap_users') || {};
+  const u = users[S.user.email];
+  if (!u) return;
+  u.pts = Math.max(0, (u.pts || 0) + delta);
+  u.totalRating = Math.max(0, (u.totalRating || 0) + (delta > 0 ? rating : -rating));
+  if (delta > 0) {
+    u.posts = u.posts || [];
+    u.posts.unshift({ mode, rating, ts: Date.now() });
+    if (u.posts.length > 10) u.posts = u.posts.slice(0, 10);
+  }
+  users[S.user.email] = u;
+  LS.set('bmap_users', users);
+  S.user = u;
+  updateProfileUI();
+  renderMyPosts();
+}
+function updateProfileUI() {
+  const u = S.user;
+  if (!u) return;
+  document.getElementById('profileAvatar').textContent = u.avatar || '🙂';
+  document.getElementById('profileName').textContent = u.pseudo;
+  document.getElementById('profileBio').textContent = u.bio || '';
+  document.getElementById('statSince').textContent = u.since || '—';
+  document.getElementById('statPoints').textContent = u.pts || 0;
+  const avg = u.pts > 0 ? ((u.totalRating / u.pts).toFixed(1) + ' ♥️') : '—';
+  document.getElementById('statRating').textContent = avg;
+}
+function renderMyPosts() {
+  const u = S.user;
+  const el = document.getElementById('myPostsList');
+  if (!u || !u.posts || u.posts.length === 0) { el.innerHTML = '<p class="no-posts">Aucun point ajouté.</p>'; return; }
+  el.innerHTML = u.posts.slice(0, 5).map(p =>
+    `<div class="postItem">${p.mode === 'public' ? '🌍 Public' : '🔒 Privé'} — ${'♥️'.repeat(p.rating || 0) || '🩶'}<br><small>${new Date(p.ts).toLocaleDateString('fr-FR')}</small></div>`
   ).join('');
 }
-
-// EDIT PROFILE
-document.getElementById('editProfileBtn').addEventListener('click',()=>{
-  const u=S.user;
-  document.getElementById('editPseudo').value=u.pseudo;
-  document.getElementById('editBio').value=u.bio||'';
-  document.getElementById('editAvatar').textContent=u.avatar||'🙂';
-  buildAvatarPicker('editAvatarPicker','editAvatar',true);
-  showSection('editSection');
-});
-document.getElementById('saveEditBtn').addEventListener('click',()=>{
-  const pseudo=document.getElementById('editPseudo').value.trim();
-  if(!pseudo){notify('Le pseudo ne peut pas être vide','error');return}
-  const bio=document.getElementById('editBio').value.trim();
-  const avatar=pickerSel.edit||S.user.avatar||'🙂';
-  const users=LS.get('bmap_users')||{};
-  const u=users[S.user.email];
-  u.pseudo=pseudo;u.bio=bio;u.avatar=avatar;
-  users[S.user.email]=u;LS.set('bmap_users',users);S.user=u;
-  renderProfile();notify('Profil mis à jour ✅','systeme');showSection('connectedSection');
-});
-document.getElementById('cancelEditBtn').addEventListener('click',()=>showSection('connectedSection'));
-
-// SETTINGS
-document.getElementById('closeSettingsBtn').addEventListener('click',()=>document.getElementById('settingsPanel').classList.remove('show'));
-function syncSettingsUI(){
-  document.getElementById('notifToggle').value=S.settings.notif?'on':'off';
-  const sel=document.getElementById('notifCats');
-  Array.from(sel.options).forEach(o=>o.selected=!!S.settings.cats[o.value]);
+function connectUser(u, stay) {
+  S.loggedIn = true;
+  S.user = u;
+  if (stay) LS.set('bmap_session', { email: u.email });
+  updateProfileUI();
+  renderMyPosts();
+  notify('Bienvenue ' + u.pseudo + ' 👋', 'systeme');
+  showProfileSection('connectedSection');
 }
-document.getElementById('saveSettings').addEventListener('click',()=>{
-  S.settings.notif=document.getElementById('notifToggle').value==='on';
-  S.settings.cats={points:false,amis:false,systeme:false};
-  Array.from(document.getElementById('notifCats').selectedOptions).forEach(o=>S.settings.cats[o.value]=true);
-  LS.set('bmap_settings',S.settings);
-  notify('Paramètres sauvegardés ✅','systeme');
-  document.getElementById('settingsPanel').classList.remove('show');
-});
+function logout() {
+  S.loggedIn = false;
+  S.user = null;
+  LS.del('bmap_session');
+  notify('À bientôt 👋', 'systeme');
+  showProfileSection('loginSection');
+}
 
-// INIT
-(function init(){
-  const ss=LS.get('bmap_settings');if(ss)S.settings=ss;
-  syncSettingsUI();
-  const sess=LS.get('bmap_session');
-  if(sess&&sess.email){
-    const users=LS.get('bmap_users')||{};
-    const u=users[sess.email];
-    if(u){S.loggedIn=true;S.user=u;renderProfile();}
+// Avatar picker
+let pickerSel = { reg: '🙂', edit: '🙂' };
+function buildAvatarPicker(pid, did, isEdit) {
+  const picker = document.getElementById(pid);
+  const cur = isEdit ? (S.user && S.user.avatar) || '🙂' : '🙂';
+  picker.innerHTML = AVATARS.map(e => `<div class="avatar-opt ${e === cur ? 'selected' : ''}" data-e="${e}">${e}</div>`).join('');
+  picker.querySelectorAll('.avatar-opt').forEach(opt => {
+    opt.addEventListener('click', () => {
+      picker.querySelectorAll('.avatar-opt').forEach(o => o.classList.remove('selected'));
+      opt.classList.add('selected');
+      document.getElementById(did).textContent = opt.dataset.e;
+      if (isEdit) pickerSel.edit = opt.dataset.e;
+      else pickerSel.reg = opt.dataset.e;
+    });
+  });
+  if (isEdit) pickerSel.edit = cur;
+  else pickerSel.reg = '🙂';
+}
+
+// Panels
+function showProfileSection(id) {
+  ['loginSection', 'registerSection', 'connectedSection', 'editSection'].forEach(s => {
+    const el = document.getElementById(s);
+    if (el) { el.classList.remove('active'); el.style.display = 'none'; }
+  });
+  const el = document.getElementById(id);
+  if (el) { el.style.display = 'flex'; el.classList.add('active'); }
+}
+
+// ---------- INIT & EVENTS ----------
+document.addEventListener('DOMContentLoaded', () => {
+  initMap();
+  // Charger données
+  const ss = LS.get('bmap_settings');
+  if (ss) S.settings = ss;
+  const savedPoints = LS.get('bmap_points') || [];
+  S.mapPoints = savedPoints;
+  renderMarkers();
+
+  const sess = LS.get('bmap_session');
+  if (sess && sess.email) {
+    const users = LS.get('bmap_users') || {};
+    const u = users[sess.email];
+    if (u) { S.loggedIn = true; S.user = u; updateProfileUI(); renderMyPosts(); showProfileSection('connectedSection'); }
+    else showProfileSection('loginSection');
+  } else showProfileSection('loginSection');
+
+  // UI bindings
+  document.getElementById('openFormBtn').onclick = () => document.getElementById('formContainer').classList.add('show');
+  document.getElementById('closeFormBtn').onclick = () => document.getElementById('formContainer').classList.remove('show');
+  // Hearts rating
+  document.querySelectorAll('.heart').forEach(h => {
+    h.addEventListener('click', () => {
+      S.rating = parseInt(h.dataset.v);
+      document.querySelectorAll('.heart').forEach(x => x.textContent = parseInt(x.dataset.v) <= S.rating ? '♥️' : '🩶');
+    });
+  });
+  document.getElementById('addPointBtn').onclick = () => {
+    const mode = document.getElementById('modeSelect').value;
+    const center = map.getCenter();
+    addPointToStorage(center.lat, center.lng, mode, S.rating);
+    // reset rating
+    S.rating = 0;
+    document.querySelectorAll('.heart').forEach(h => h.textContent = '🩶');
+    document.getElementById('formContainer').classList.remove('show');
+  };
+  // Menu
+  const menuBtn = document.getElementById('menuBtn'), menuPopup = document.getElementById('menuPopup'), menuOverlay = document.getElementById('menuOverlay');
+  menuBtn.onclick = () => { menuPopup.style.display = 'flex'; menuOverlay.style.display = 'block'; };
+  menuOverlay.onclick = () => { menuPopup.style.display = 'none'; menuOverlay.style.display = 'none'; };
+  document.getElementById('profileMenuBtn').onclick = () => { document.getElementById('profilePanel').classList.add('show'); menuPopup.style.display = 'none'; menuOverlay.style.display = 'none'; };
+  document.getElementById('settingsMenuBtn').onclick = () => { document.getElementById('settingsPanel').classList.add('show'); menuPopup.style.display = 'none'; menuOverlay.style.display = 'none'; syncSettingsUI(); };
+  document.getElementById('reportMenuBtn').onclick = () => { notify('Signalement envoyé, merci 🙏', 'systeme'); menuPopup.style.display = 'none'; menuOverlay.style.display = 'none'; };
+  document.getElementById('closeProfileBtn').onclick = () => document.getElementById('profilePanel').classList.remove('show');
+  document.getElementById('closeSettingsBtn').onclick = () => document.getElementById('settingsPanel').classList.remove('show');
+  document.getElementById('accountBtn').onclick = () => document.getElementById('profilePanel').classList.add('show');
+  // Home geoloc
+  document.getElementById('homeBtn').onclick = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(pos => map.setView([pos.coords.latitude, pos.coords.longitude], 15), () => notify('Position indisponible', 'error'));
+    } else notify('Géolocalisation non supportée', 'error');
+  };
+  // Authentication
+  document.getElementById('toRegister').onclick = (e) => { e.preventDefault(); buildAvatarPicker('regAvatarPicker','regAvatar',false); showProfileSection('registerSection'); };
+  document.getElementById('toLogin').onclick = (e) => { e.preventDefault(); showProfileSection('loginSection'); };
+  document.getElementById('registerBtn').onclick = () => {
+    const pseudo = document.getElementById('regPseudo').value.trim();
+    const email = document.getElementById('regEmail').value.trim().toLowerCase();
+    const pwd = document.getElementById('regPwd').value;
+    const pwd2 = document.getElementById('regPwd2').value;
+    const bio = document.getElementById('regBio').value.trim();
+    const avatar = pickerSel.reg;
+    if (!pseudo || !email || !pwd) { notify('Remplis tous les champs obligatoires', 'error'); return; }
+    if (!/\S+@\S+\.\S+/.test(email)) { notify('Email invalide', 'error'); return; }
+    if (pwd.length < 6) { notify('Mot de passe trop court (6 min)', 'error'); return; }
+    if (pwd !== pwd2) { notify('Les mots de passe ne correspondent pas', 'error'); return; }
+    let users = LS.get('bmap_users') || {};
+    if (users[email]) { notify('Email déjà utilisé', 'error'); return; }
+    const u = { email, pseudo, bio, avatar, hash: btoa(email + ':' + pwd + ':bmap'), pts: 0, totalRating: 0, posts: [], since: new Date().toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' }) };
+    users[email] = u;
+    LS.set('bmap_users', users);
+    notify('✅ Compte créé !', 'systeme');
+    connectUser(u, false);
+  };
+  document.getElementById('loginBtn').onclick = () => {
+    const email = document.getElementById('loginEmail').value.trim().toLowerCase();
+    const pwd = document.getElementById('loginPassword').value;
+    const stay = document.getElementById('stayConnected').checked;
+    if (!email || !pwd) { notify('Remplis tous les champs', 'error'); return; }
+    const users = LS.get('bmap_users') || {};
+    const u = users[email];
+    if (!u) { notify('Aucun compte avec cet email', 'error'); return; }
+    if (btoa(email + ':' + pwd + ':bmap') !== u.hash) { notify('Mot de passe incorrect', 'error'); return; }
+    connectUser(u, stay);
+  };
+  document.getElementById('logoutBtn').onclick = logout;
+  document.getElementById('editProfileBtn').onclick = () => {
+    document.getElementById('editPseudo').value = S.user.pseudo;
+    document.getElementById('editBio').value = S.user.bio || '';
+    document.getElementById('editAvatar').textContent = S.user.avatar || '🙂';
+    buildAvatarPicker('editAvatarPicker', 'editAvatar', true);
+    showProfileSection('editSection');
+  };
+  document.getElementById('saveEditBtn').onclick = () => {
+    const pseudo = document.getElementById('editPseudo').value.trim();
+    if (!pseudo) { notify('Le pseudo ne peut pas être vide', 'error'); return; }
+    const bio = document.getElementById('editBio').value.trim();
+    const avatar = pickerSel.edit;
+    const users = LS.get('bmap_users') || {};
+    const u = users[S.user.email];
+    u.pseudo = pseudo; u.bio = bio; u.avatar = avatar;
+    users[S.user.email] = u;
+    LS.set('bmap_users', users);
+    S.user = u;
+    updateProfileUI();
+    notify('Profil mis à jour ✅', 'systeme');
+    showProfileSection('connectedSection');
+  };
+  document.getElementById('cancelEditBtn').onclick = () => showProfileSection('connectedSection');
+  // Settings
+  function syncSettingsUI() {
+    document.getElementById('notifToggle').value = S.settings.notif ? 'on' : 'off';
+    const sel = document.getElementById('notifCats');
+    Array.from(sel.options).forEach(o => o.selected = !!S.settings.cats[o.value]);
   }
-  const pts=LS.get('bmap_points')||[];
-  S.mapPoints=pts;
-  requestRedraw();
-})();
+  document.getElementById('saveSettings').onclick = () => {
+    S.settings.notif = document.getElementById('notifToggle').value === 'on';
+    S.settings.cats = { points: false, amis: false, systeme: false };
+    Array.from(document.getElementById('notifCats').selectedOptions).forEach(o => S.settings.cats[o.value] = true);
+    LS.set('bmap_settings', S.settings);
+    notify('Paramètres sauvegardés ✅', 'systeme');
+    document.getElementById('settingsPanel').classList.remove('show');
+  };
+});
 </script>
-
 </body>
 </html>
